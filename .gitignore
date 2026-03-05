@@ -1,0 +1,11 @@
+# outputs / generated artifacts
+outputs/
+*.npy
+*.npz
+*.png
+*.jpg
+*.jpeg
+*.zip
+
+# local data
+test_frames/
