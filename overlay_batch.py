@@ -9,19 +9,16 @@ import matplotlib.pyplot as plt
 # =========================
 
 # Input directories
-IMAGES_DIR = Path("test_frames/images")
-DISP_DIR = Path("test_frames/images")
+IMAGES_DIR = Path("/Users/devrathod/Documents/classes_2026/Senior Design/Eco-Cars-Depth-Estimation-2026/data/output/images")
+DISP_DIR = Path("/Users/devrathod/Documents/classes_2026/Senior Design/Eco-Cars-Depth-Estimation-2026/data/output/images")
+all_depths = np.load("/Users/devrathod/Documents/classes_2026/Senior Design/Eco-Cars-Depth-Estimation-2026/data/output/all_depths.npy")
 
 # Output directories
-OUTPUT_ROOT = Path("outputs")
+OUTPUT_ROOT = Path("/Users/devrathod/Documents/classes_2026/Senior Design/Eco-Cars-Depth-Estimation-2026/data/monodepth_v2")
 DEPTH_DIR = OUTPUT_ROOT / "depth_arrays"
 OVERLAY_DIR = OUTPUT_ROOT / "sparse_overlays"
 
 USE_INVERSE = True
-EPS = 1e-6
-
-MIN_DEPTH = 0.1
-MAX_DEPTH = 100.0
 
 STRIDE = 1
 ROI_Y_MIN_FRAC = 0.4
@@ -29,7 +26,7 @@ ROI_Y_MAX_FRAC = 1.0
 
 EXCLUDE_BOTTOM_FRAC = 0.00
 
-DEPTH_MAX_M = 2.0
+DEPTH_MAX_M = None
 
 DEPTH_MIN_M = None
 
@@ -66,22 +63,10 @@ def load_disp(path: Path):
 # =========================
 # DISP → DEPTH
 # =========================
-
 def disp_to_depth(disp):
-    """
-    Convert disparity to depth-like map.
-    Do NOT clip disp to [0, 1] unless you are sure it is raw sigmoid output.
-    """
     disp = np.asarray(disp, dtype=np.float32)
-
-    min_disp = 1.0 / MAX_DEPTH
-    max_disp = 1.0 / MIN_DEPTH
-
-    scaled_disp = min_disp + (max_disp - min_disp) * disp
-    depth = 1.0 / np.clip(scaled_disp, EPS, None)
-
+    depth = 1.0 / (disp + 1e-6)
     return depth
-
 
 # =========================
 # VISUALIZATION
@@ -171,16 +156,13 @@ def main():
     for rgb_path in rgb_files:
 
         stem = rgb_path.stem
-        disp_path = DISP_DIR / f"{stem}_disp.npy"
-
-        if not disp_path.exists():
-            print(f"[SKIP] {disp_path}")
-            continue
+        frame_idx = int(stem.split("_")[1])
 
         rgb = load_rgb(rgb_path)
-        disp = load_disp(disp_path)
+        disp = all_depths[frame_idx]
 
-        depth = disp_to_depth(disp)
+        # depth = disp_to_depth(disp)
+        depth = disp
 
         # Save depth numpy array
         depth_path = DEPTH_DIR / f"{stem}_depth.npy"

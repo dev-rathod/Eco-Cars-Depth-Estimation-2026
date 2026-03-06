@@ -1,4 +1,45 @@
-# outputs / generated artifacts
+# =========================
+# Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# =========================
+# Large datasets
+# =========================
+data/
+datasets/
+test_frames/
+
+# =========================
+# Generated outputs
+# =========================
+outputs/
+*.npy
+*.npz
+
+# =========================
+# Depth / visualization outputs
+# =========================
+sparse_overlays/
+depth_arrays/
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# MacOS
+# =========================
+.DS_Store
+
+# =========================
+# Archives
+# =========================
+*.zip# outputs / generated artifacts
 outputs/
 *.npy
 *.npz
