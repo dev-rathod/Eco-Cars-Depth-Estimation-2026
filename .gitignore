@@ -44,6 +44,7 @@ outputs/
 *.npy
 *.npz
 *.png
+!plots/*.png
 *.jpg
 *.jpeg
 *.zip
