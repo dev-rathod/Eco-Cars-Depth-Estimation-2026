@@ -1,7 +1,8 @@
-.vscode/
-outputs
-checkpoints
-__pycache__
-*/__pycache__
-*.pyc
-gradio*
+.venv/
+.venv_cuda/
+__pycache__/
+checkpoints/
+outputs_test/
+*.ply
+*.mp4
+*.pth
