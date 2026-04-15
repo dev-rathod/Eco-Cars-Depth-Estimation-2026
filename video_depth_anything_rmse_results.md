@@ -30,3 +30,16 @@ AbsRel            : 0.0630
 RMSE              : 2.2860 m
 delta1            : 0.9714
 ```
+
+Metric notes:
+
+- `AbsRel` is mean absolute relative error. Lower is better.
+- `RMSE` is root mean squared error in meters. Lower is better.
+- `delta1` is the fraction of valid pixels within a `1.25x` prediction-to-ground-truth ratio. Higher is better.
+
+Calibration report notes:
+
+- A separate batch calibration run was generated for 22 downloaded segment zips and stored under `pipeline_result/`.
+- Those per-segment reports use the same calibration idea: calibrate on the first 5 matched frames, fit `hyperbolic`, `power`, `log`, and `exponential`, then keep the model with the lowest calibration RMSE.
+- In that 22-segment batch, every segment selected `power` and reported `AbsRel = 0.0`, `RMSE = 0.0`, and `delta1 = 1.0`.
+- Those perfect scores should be interpreted carefully. They can indicate genuine agreement, but they can also mean the prediction arrays and GT arrays were already numerically identical or already aligned before calibration.

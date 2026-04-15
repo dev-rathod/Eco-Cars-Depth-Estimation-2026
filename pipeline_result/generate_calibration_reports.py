@@ -186,11 +186,24 @@ def read_pred_segment(pred_zip_path, image_zip_path):
 
 
 def write_segment_report(report_path, result):
+    interpretation_lines = [
+        "Interpretation:",
+        "- Lower AbsRel and RMSE are better.",
+        "- Higher delta1 is better and measures the fraction of pixels within a 1.25x error ratio.",
+        f"- The selected model for this segment was `{result['selected_model']}` because it had the lowest calibration RMSE.",
+    ]
+    if result["AbsRel"] == 0.0 and result["RMSE"] == 0.0 and result["delta1"] == 1.0:
+        interpretation_lines.append(
+            "- This segment produced a perfect score in this run. Treat that cautiously because it can also indicate that the prediction and GT inputs were already numerically aligned."
+        )
+
     lines = [
         f"Segment: {result['segment']}",
         f"Matched stems: {result['matched_stems']}",
         f"Calibration frames: {result['calibration_frames']}",
         f"Evaluation pixels: {result['evaluation_pixels']:,}",
+        "",
+        *interpretation_lines,
         "",
         "Calibration fits:",
     ]
