@@ -1,4 +1,8 @@
-.DS_Store
-# Ignore the data folder
-data/
-
+.venv/
+.venv_cuda/
+__pycache__/
+checkpoints/
+outputs_test/
+*.ply
+*.mp4
+*.pth
