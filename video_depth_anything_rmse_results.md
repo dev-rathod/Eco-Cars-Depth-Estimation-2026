@@ -8,15 +8,15 @@ This evaluation uses the Google Drive artifacts:
 
 The first ten ground-truth frames in the Drive zip are on a different scale than the rest of the segment. To match the usable portion of the segment, evaluation starts at `frame_00010`, calibrates on `frame_00010` through `frame_00014`, and evaluates on `frame_00015` through `frame_00198`.
 
-Command:
+Notebook workflow:
 
-```powershell
-python video_depth_anything_pipeline.py evaluate `
-  --pred-stack "G:\공유 드라이브\depth_estimators\VideoDepthAnything\video_depth_anything_depths.npy" `
-  --pred-stems-zip "G:\공유 드라이브\depth_estimators\waymo_open\output\images.zip" `
-  --gt-depth-zip "G:\공유 드라이브\depth_estimators\waymo_open\output\depth.zip" `
-  --start-index 10
-```
+- Open `VideoDepthAnything_Pipeline.ipynb`
+- Go to `Section 2` and set:
+  - `PRED_STACK = G:\...\VideoDepthAnything\video_depth_anything_depths.npy`
+  - `PRED_STEMS_ZIP = G:\...\waymo_open\output\images.zip`
+  - `GT_DEPTH_ZIP = G:\...\waymo_open\output\depth.zip`
+  - `START_INDEX = 10`
+- Run `Section 4`
 
 Results:
 

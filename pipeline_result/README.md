@@ -8,7 +8,7 @@ This folder contains calibration reports generated from the GitHub `model_infere
 - `summary.json`: aggregate counts and average metrics across the processed segments
 - `reports/*.md`: human-readable per-segment calibration reports
 - `reports/*.json`: machine-readable per-segment outputs for the segments generated in the later batch reruns
-- `video_depth_anything_pipeline.py report`: unified batch utility used to generate these reports from the downloaded GT zip plus Drive prediction/image zips
+- `VideoDepthAnything_Pipeline.ipynb` Section 5: unified batch utility used to generate these reports from the downloaded GT zip plus Drive prediction/image zips
 
 ## Metric Meaning
 
