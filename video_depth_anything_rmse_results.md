@@ -11,7 +11,7 @@ The first ten ground-truth frames in the Drive zip are on a different scale than
 Command:
 
 ```powershell
-python eval_video_depth_anything.py `
+python video_depth_anything_pipeline.py evaluate `
   --pred-stack "G:\공유 드라이브\depth_estimators\VideoDepthAnything\video_depth_anything_depths.npy" `
   --pred-stems-zip "G:\공유 드라이브\depth_estimators\waymo_open\output\images.zip" `
   --gt-depth-zip "G:\공유 드라이브\depth_estimators\waymo_open\output\depth.zip" `

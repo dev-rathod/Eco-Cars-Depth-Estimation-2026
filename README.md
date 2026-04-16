@@ -129,15 +129,16 @@ Options:
 - `--save_npz` (optional): Save the depth map in `npz` format.
 - `--save_exr` (optional): Save the depth map in `exr` format.
 
-### Run inference on a directory of frames
-If your workflow starts from extracted frames instead of a video file, use `infer_frames.py`.
-This is useful for exporting raw depth arrays and heatmap overlays for a large frame set.
+### Run the unified pipeline on a directory of frames
+If your workflow starts from extracted frames instead of a video file, use `video_depth_anything_pipeline.py`.
+This unified entry point covers frame-directory inference, Waymo-style evaluation, and batch report generation.
 
 ```bash
-python3 infer_frames.py \
+python3 video_depth_anything_pipeline.py infer \
     --input_dir ./results/sample_frames \
     --output_dir ./outputs_frames \
     --encoder vitl \
+    --target_fps 24 \
     --save_individual_depths \
     --save_stack \
     --save_heatmaps
@@ -153,8 +154,26 @@ Additional options:
 - `--max_frames`: limit the number of frames for quick tests
 - `--metric`: use the metric depth checkpoint
 - `--fp32`: run inference in float32
+- `--target_fps`: target sequence FPS passed into Video Depth Anything, default `24`
 - `--heatmap_alpha`: blend ratio for the original frame, default `0.5`
 - `--heatmap_colormap`: one of `jet`, `inferno`, `magma`, `plasma`, `turbo`, `viridis`
+
+Example evaluation:
+```bash
+python3 video_depth_anything_pipeline.py evaluate \
+    --pred-stack ./outputs_frames/video_depth_anything_depths.npy \
+    --pred-stems-zip /path/to/images.zip \
+    --gt-depth-zip /path/to/depth.zip
+```
+
+Example batch report generation:
+```bash
+python3 video_depth_anything_pipeline.py report \
+    --gt-batch-zip /path/to/ground_truth_batch.zip \
+    --pred-zip-dir /path/to/prediction_zips \
+    --image-zip-dir /path/to/image_zips \
+    --output-dir ./pipeline_result
+```
 
 ### Optional: faster inference with a dedicated xFormers environment
 For local performance testing, a separate virtual environment can be used with a newer CUDA-enabled PyTorch build and `xformers`. This environment should not be committed to Git.
@@ -170,7 +189,7 @@ python -m pip install xformers opencv-python pillow imageio imageio-ffmpeg decor
 
 Example usage:
 ```powershell
-.venv_xformers_test\Scripts\python.exe infer_frames.py --input_dir .\tmp_waymo_images --output_dir .\outputs_xf --encoder vits --save_individual_depths --save_stack
+.venv_xformers_test\Scripts\python.exe video_depth_anything_pipeline.py infer --input_dir .\tmp_waymo_images --output_dir .\outputs_xf --encoder vits --target_fps 24 --save_individual_depths --save_stack
 ```
 
 ### Run inference on a video using streaming mode (Experimental features)
