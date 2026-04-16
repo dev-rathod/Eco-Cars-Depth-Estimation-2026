@@ -18,6 +18,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--input_size', type=int, default=518)
     parser.add_argument('--encoder', type=str, default='vitl', choices=['vits', 'vitb', 'vitl'])
+    parser.add_argument('--target_fps', type=int, default=24, help='target sequence FPS for inference')
 
     args = parser.parse_args()
    
@@ -56,8 +57,13 @@ if __name__ == '__main__':
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                     videos.append(img)
                 videos = np.stack(videos, axis=0)
-                target_fps=1
-                depths, fps = video_depth_anything.infer_video_depth(videos, target_fps, input_size=args.input_size, device=DEVICE, fp32=True)
+                depths, fps = video_depth_anything.infer_video_depth(
+                    videos,
+                    args.target_fps,
+                    input_size=args.input_size,
+                    device=DEVICE,
+                    fp32=True,
+                )
 
                 for i in range(len(infer_paths)):
                     infer_path = infer_paths[i]
