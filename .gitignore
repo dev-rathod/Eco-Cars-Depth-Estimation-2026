@@ -1,8 +1,11 @@
 .venv/
+.venv_xformers_test/
 .venv_cuda/
 __pycache__/
 checkpoints/
 outputs_test/
+tmp_waymo_images/
+tmp_benchmark_infer.json
 *.ply
 *.mp4
 *.pth

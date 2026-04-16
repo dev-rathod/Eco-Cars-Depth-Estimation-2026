@@ -156,6 +156,23 @@ Additional options:
 - `--heatmap_alpha`: blend ratio for the original frame, default `0.5`
 - `--heatmap_colormap`: one of `jet`, `inferno`, `magma`, `plasma`, `turbo`, `viridis`
 
+### Optional: faster inference with a dedicated xFormers environment
+For local performance testing, a separate virtual environment can be used with a newer CUDA-enabled PyTorch build and `xformers`. This environment should not be committed to Git.
+
+Example setup on Windows PowerShell:
+```powershell
+python -m venv .venv_xformers_test
+.venv_xformers_test\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+python -m pip install xformers opencv-python pillow imageio imageio-ffmpeg decord einops easydict tqdm matplotlib
+```
+
+Example usage:
+```powershell
+.venv_xformers_test\Scripts\python.exe infer_frames.py --input_dir .\tmp_waymo_images --output_dir .\outputs_xf --encoder vits --save_individual_depths --save_stack
+```
+
 ### Run inference on a video using streaming mode (Experimental features)
 We implement an experimental streaming mode **without training**. In details, we save the hidden states of temporal attentions for each frames in the caches, and only send a single frame into our video depth model during inference by reusing these past hidden states in temporal attentions. We hack our pipeline to align the original inference setting in the offline mode. Due to the inevitable gap between training and testing, we observe a **performance drop** between the streaming model and the offline model (e.g. the `d1` of ScanNet drops from `0.926` to `0.836`). Finetuning the model in the streaming mode will greatly improve the performance. We leave it for future work.
 
