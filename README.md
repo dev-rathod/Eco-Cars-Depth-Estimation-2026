@@ -125,6 +125,9 @@ Options:
 - `--target_fps` (optional): target fps of the input video, `-1` means the original fps
 - `--metric` (optional): use metric depth models trained on Virtual KITTI and IRS datasets
 - `--fp32` (optional): Use `fp32` precision for inference. By default, we use `fp16`.
+- `--compile` (optional): use `torch.compile` for lower steady-state latency after warm-up.
+- `--compile_mode` (optional): `torch.compile` mode, default is `reduce-overhead`.
+- `--disable_tf32` (optional): disable TF32 acceleration on CUDA. By default, CUDA runs use TF32 when available.
 - `--grayscale` (optional): Save the grayscale depth map, without applying color palette.
 - `--save_npz` (optional): Save the depth map in `npz` format.
 - `--save_exr` (optional): Save the depth map in `exr` format.
@@ -188,6 +191,9 @@ Options:
 - `--target_fps` (optional): target fps of the input video, `-1` means the original fps
 - `--metric` (optional): use metric depth models trained on Virtual KITTI and IRS datasets
 - `--fp32` (optional): Use `fp32` precision for inference. By default, we use `fp16`.
+- `--compile` (optional): use `torch.compile` for lower steady-state latency after warm-up.
+- `--compile_mode` (optional): `torch.compile` mode, default is `reduce-overhead`.
+- `--disable_tf32` (optional): disable TF32 acceleration on CUDA. By default, CUDA runs use TF32 when available.
 - `--grayscale` (optional): Save the grayscale depth map, without applying color palette.
 
 ## Training Loss

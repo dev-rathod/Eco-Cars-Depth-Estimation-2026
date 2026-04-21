@@ -20,6 +20,7 @@ import cv2
 
 from video_depth_anything.video_depth_stream import VideoDepthAnything
 from utils.dc_utils import save_video
+from utils.runtime import configure_inference_runtime, maybe_compile_model
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Video Depth Anything')
@@ -33,10 +34,14 @@ if __name__ == '__main__':
     parser.add_argument('--metric', action='store_true', help='use metric model')
     parser.add_argument('--fp32', action='store_true', help='model infer with torch.float32, default is torch.float16')
     parser.add_argument('--grayscale', action='store_true', help='do not apply colorful palette')
+    parser.add_argument('--compile', action='store_true', help='compile the model for lower steady-state latency')
+    parser.add_argument('--compile_mode', type=str, default='reduce-overhead', help='torch.compile mode')
+    parser.add_argument('--disable_tf32', action='store_true', help='disable TF32 matmul/cuDNN acceleration on CUDA')
 
     args = parser.parse_args()
 
     DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+    configure_inference_runtime(DEVICE, use_tf32=(not args.disable_tf32))
 
     model_configs = {
         'vits': {'encoder': 'vits', 'features': 64, 'out_channels': [48, 96, 192, 384]},
@@ -48,6 +53,7 @@ if __name__ == '__main__':
     video_depth_anything = VideoDepthAnything(**model_configs[args.encoder])
     video_depth_anything.load_state_dict(torch.load(f'./checkpoints/{checkpoint_name}_{args.encoder}.pth', map_location='cpu'), strict=True)
     video_depth_anything = video_depth_anything.to(DEVICE).eval()
+    video_depth_anything = maybe_compile_model(video_depth_anything, enable_compile=args.compile, mode=args.compile_mode)
 
     cap = cv2.VideoCapture(args.input_video)
     original_fps = cap.get(cv2.CAP_PROP_FPS)
@@ -86,6 +92,8 @@ if __name__ == '__main__':
 
     cap.release()
     print(f"time: {end - start}s")
+    if end > start and depths:
+        print(f"throughput: {len(depths) / (end - start):.2f} fps")
 
     video_name = os.path.basename(args.input_video)
     if not os.path.exists(args.output_dir):

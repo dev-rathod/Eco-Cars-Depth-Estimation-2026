@@ -14,10 +14,12 @@
 import argparse
 import numpy as np
 import os
+import time
 import torch
 
 from video_depth_anything.video_depth import VideoDepthAnything
 from utils.dc_utils import read_video_frames, save_video
+from utils.runtime import configure_inference_runtime, maybe_compile_model
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Video Depth Anything')
@@ -33,6 +35,9 @@ if __name__ == '__main__':
     parser.add_argument('--grayscale', action='store_true', help='do not apply colorful palette')
     parser.add_argument('--save_npz', action='store_true', help='save depths as npz')
     parser.add_argument('--save_exr', action='store_true', help='save depths as exr')
+    parser.add_argument('--compile', action='store_true', help='compile the model for lower steady-state latency')
+    parser.add_argument('--compile_mode', type=str, default='reduce-overhead', help='torch.compile mode')
+    parser.add_argument('--disable_tf32', action='store_true', help='disable TF32 matmul/cuDNN acceleration on CUDA')
     parser.add_argument('--focal-length-x', default=470.4, type=float,
                         help='Focal length along the x-axis.')
     parser.add_argument('--focal-length-y', default=470.4, type=float,
@@ -41,6 +46,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+    configure_inference_runtime(DEVICE, use_tf32=(not args.disable_tf32))
 
     model_configs = {
         'vits': {'encoder': 'vits', 'features': 64, 'out_channels': [48, 96, 192, 384]},
@@ -52,9 +58,16 @@ if __name__ == '__main__':
     video_depth_anything = VideoDepthAnything(**model_configs[args.encoder], metric=args.metric)
     video_depth_anything.load_state_dict(torch.load(f'./checkpoints/{checkpoint_name}_{args.encoder}.pth', map_location='cpu'), strict=True)
     video_depth_anything = video_depth_anything.to(DEVICE).eval()
+    video_depth_anything = maybe_compile_model(video_depth_anything, enable_compile=args.compile, mode=args.compile_mode)
 
     frames, target_fps = read_video_frames(args.input_video, args.max_len, args.target_fps, args.max_res)
+    start = time.time()
     depths, fps = video_depth_anything.infer_video_depth(frames, target_fps, input_size=args.input_size, device=DEVICE, fp32=args.fp32)
+    end = time.time()
+    elapsed = end - start
+    if elapsed > 0:
+        print(f"inference_time: {elapsed:.2f}s")
+        print(f"throughput: {depths.shape[0] / elapsed:.2f} fps")
 
     video_name = os.path.basename(args.input_video)
     os.makedirs(args.output_dir, exist_ok=True)

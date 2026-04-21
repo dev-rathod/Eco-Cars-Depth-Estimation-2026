@@ -58,6 +58,25 @@ class VideoDepthAnything(nn.Module):
         self.head = DPTHeadTemporal(self.pretrained.embed_dim, features, use_bn, out_channels=out_channels, use_clstoken=use_clstoken, num_frames=num_frames, pe=pe)
         self.metric = metric
 
+    def _build_transform(self, input_size):
+        return Compose([
+            Resize(
+                width=input_size,
+                height=input_size,
+                resize_target=False,
+                keep_aspect_ratio=True,
+                ensure_multiple_of=14,
+                resize_method='lower_bound',
+                image_interpolation_method=cv2.INTER_CUBIC,
+            ),
+            NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            PrepareForNet(),
+        ])
+
+    def _transform_frame(self, transform, frame):
+        image = transform({'image': frame.astype(np.float32, copy=False) / 255.0})['image']
+        return torch.from_numpy(image).unsqueeze(0).unsqueeze(0)
+
     def forward(self, x):
         B, T, C, H, W = x.shape
         patch_h, patch_w = H // 14, W // 14
@@ -74,19 +93,7 @@ class VideoDepthAnything(nn.Module):
             input_size = int(input_size * 1.777 / ratio)
             input_size = round(input_size / 14) * 14
 
-        transform = Compose([
-            Resize(
-                width=input_size,
-                height=input_size,
-                resize_target=False,
-                keep_aspect_ratio=True,
-                ensure_multiple_of=14,
-                resize_method='lower_bound',
-                image_interpolation_method=cv2.INTER_CUBIC,
-            ),
-            NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            PrepareForNet(),
-        ])
+        transform = self._build_transform(input_size)
 
         frame_list = [frames[i] for i in range(frames.shape[0])]
         frame_step = INFER_LEN - OVERLAP
@@ -96,23 +103,30 @@ class VideoDepthAnything(nn.Module):
 
         depth_list = []
         pre_input = None
-        for frame_id in tqdm(range(0, org_video_len, frame_step)):
-            cur_list = []
-            for i in range(INFER_LEN):
-                cur_list.append(torch.from_numpy(transform({'image': frame_list[frame_id+i].astype(np.float32) / 255.0})['image']).unsqueeze(0).unsqueeze(0))
-            cur_input = torch.cat(cur_list, dim=1).to(device)
-            if pre_input is not None:
-                cur_input[:, :OVERLAP, ...] = pre_input[:, KEYFRAMES, ...]
+        with torch.inference_mode():
+            for frame_id in tqdm(range(0, org_video_len, frame_step)):
+                if pre_input is None:
+                    start_idx = 0
+                    prev_keyframes = None
+                else:
+                    start_idx = OVERLAP
+                    prev_keyframes = pre_input[:, KEYFRAMES, ...]
 
-            with torch.no_grad():
+                cur_list = [
+                    self._transform_frame(transform, frame_list[frame_id + i])
+                    for i in range(start_idx, INFER_LEN)
+                ]
+                new_input = torch.cat(cur_list, dim=1).to(device, non_blocking=True)
+                cur_input = new_input if prev_keyframes is None else torch.cat((prev_keyframes, new_input), dim=1)
+
                 with torch.autocast(device_type=device, enabled=(not fp32)):
                     depth = self.forward(cur_input) # depth shape: [1, T, H, W]
 
-            depth = depth.to(cur_input.dtype)
-            depth = F.interpolate(depth.flatten(0,1).unsqueeze(1), size=(frame_height, frame_width), mode='bilinear', align_corners=True)
-            depth_list += [depth[i][0].cpu().numpy() for i in range(depth.shape[0])]
+                depth = depth.to(cur_input.dtype)
+                depth = F.interpolate(depth.flatten(0,1).unsqueeze(1), size=(frame_height, frame_width), mode='bilinear', align_corners=True)
+                depth_list.extend(depth.squeeze(1).cpu().numpy())
 
-            pre_input = cur_input
+                pre_input = cur_input
 
         del frame_list
         gc.collect()

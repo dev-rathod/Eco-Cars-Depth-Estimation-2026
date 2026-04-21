@@ -59,6 +59,25 @@ class VideoDepthAnything(nn.Module):
         assert self.gap == 41
         self.id = -1
 
+    def _build_transform(self, input_size):
+        return Compose([
+            Resize(
+                width=input_size,
+                height=input_size,
+                resize_target=False,
+                keep_aspect_ratio=True,
+                ensure_multiple_of=14,
+                resize_method='lower_bound',
+                image_interpolation_method=cv2.INTER_CUBIC,
+            ),
+            NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            PrepareForNet(),
+        ])
+
+    def _transform_frame(self, frame):
+        image = self.transform({'image': frame.astype(np.float32, copy=False) / 255.0})['image']
+        return torch.from_numpy(image).unsqueeze(0).unsqueeze(0)
+
     def forward(self, x):
         return self.forward_depth(self.forward_features(x), x.shape)[0]
     
@@ -87,25 +106,12 @@ class VideoDepthAnything(nn.Module):
                 input_size = int(input_size * 1.777 / ratio)
                 input_size = round(input_size / 14) * 14
 
-            self.transform = Compose([
-                Resize(
-                    width=input_size,
-                    height=input_size,
-                    resize_target=False,
-                    keep_aspect_ratio=True,
-                    ensure_multiple_of=14,
-                    resize_method='lower_bound',
-                    image_interpolation_method=cv2.INTER_CUBIC,
-                ),
-                NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-                PrepareForNet(),
-            ])
+            self.transform = self._build_transform(input_size)
 
             # Inference the first frame
-            cur_list = [torch.from_numpy(self.transform({'image': frame.astype(np.float32) / 255.0})['image']).unsqueeze(0).unsqueeze(0)]
-            cur_input = torch.cat(cur_list, dim=1).to(device)
+            cur_input = self._transform_frame(frame).to(device, non_blocking=True)
             
-            with torch.no_grad():
+            with torch.inference_mode():
                 with torch.autocast(device_type=device, enabled=(not fp32)):
                     cur_feature = self.forward_features(cur_input)
                     x_shape = cur_input.shape
@@ -125,8 +131,8 @@ class VideoDepthAnything(nn.Module):
             assert frame_width == self.frame_width
 
             # infer feature
-            cur_input = torch.from_numpy(self.transform({'image': frame.astype(np.float32) / 255.0})['image']).unsqueeze(0).unsqueeze(0).to(device)
-            with torch.no_grad():
+            cur_input = self._transform_frame(frame).to(device, non_blocking=True)
+            with torch.inference_mode():
                 with torch.autocast(device_type=device, enabled=(not fp32)):
                     cur_feature = self.forward_features(cur_input)
                     x_shape = cur_input.shape
@@ -140,15 +146,13 @@ class VideoDepthAnything(nn.Module):
             cur_cache = [torch.cat([h[i] for h in cur_list], dim=1) for i in range(len(cur_list[0]))]
 
             # infer depth
-            with torch.no_grad():
+            with torch.inference_mode():
                 with torch.autocast(device_type=device, enabled=(not fp32)):
                     depth, new_cache = self.forward_depth(cur_feature, x_shape, cached_hidden_state_list=cur_cache)
 
             depth = depth.to(cur_input.dtype)
             depth = F.interpolate(depth.flatten(0,1).unsqueeze(1), size=(frame_height, frame_width), mode='bilinear', align_corners=True)
-            depth_list = [depth[i][0].cpu().numpy() for i in range(depth.shape[0])]
-
-            new_depth = depth_list[-1]
+            new_depth = depth[-1][0].cpu().numpy()
 
             self.frame_cache_list.append(new_cache)
 
